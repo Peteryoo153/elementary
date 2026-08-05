@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LIS 초등 상점·디텐션 관리</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Gowun+Batang:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#22304a;--ink-soft:#5b6b85;--paper:#f6f8fa;--card:#fff;--line:#dde4ec;
+  --blue:#3a6ea5;--blue-soft:#e8f0f9;
+  --amber:#e9a820;--amber-soft:#fdf3dc;
+  --green:#3d8b5f;--green-soft:#e5f3ec;
+  --red:#c9503f;--red-soft:#fbe9e6;
+  --grey-soft:#eef1f5;--radius:10px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'IBM Plex Sans KR',sans-serif;background:var(--paper);color:var(--ink);font-size:15px;line-height:1.5}
+button{font-family:inherit;cursor:pointer;border:none;background:none;font-size:inherit}
+
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:28px;padding:20px}
+.login-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:44px 40px;max-width:400px;width:100%;text-align:center;box-shadow:0 2px 14px rgba(34,48,74,.06)}
+.school-mark{font-family:'Gowun Batang',serif;font-size:26px;font-weight:700;color:var(--blue);margin-bottom:6px}
+.login-card p{color:var(--ink-soft);font-size:13.5px;margin-bottom:28px}
+.google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;border:1px solid var(--line);border-radius:8px;background:#fff;font-weight:500;transition:background .15s}
+.google-btn:hover{background:var(--grey-soft)}
+.google-btn svg{width:18px;height:18px}
+.login-note{font-size:12px;color:var(--ink-soft);margin-top:16px !important;margin-bottom:0 !important}
+.login-err{color:var(--red);font-size:13px;margin-top:12px !important;margin-bottom:0 !important;display:none}
+
+#app{display:none;max-width:960px;margin:0 auto;padding:0 16px 60px}
+header{display:flex;align-items:center;justify-content:space-between;padding:18px 0 14px;border-bottom:2px solid var(--ink);flex-wrap:wrap;gap:8px}
+.brand{font-family:'Gowun Batang',serif;font-size:19px;font-weight:700}
+.brand span{color:var(--blue)}
+.user-chip{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-soft)}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px}
+.logout{font-size:12px;color:var(--ink-soft);text-decoration:underline}
+
+nav{display:flex;gap:4px;margin:16px 0 22px;background:var(--grey-soft);border-radius:var(--radius);padding:4px}
+nav button{flex:1;padding:10px;border-radius:7px;font-weight:500;color:var(--ink-soft);transition:all .15s}
+nav button.active{background:var(--card);color:var(--ink);font-weight:600;box-shadow:0 1px 4px rgba(34,48,74,.1)}
+
+h2{font-size:16px;font-weight:600;margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.step-label{font-size:12px;font-weight:600;color:var(--blue);letter-spacing:.05em;margin-bottom:10px}
+
+/* 유형 토글 */
+.type-toggle{display:flex;gap:8px;margin-bottom:16px}
+.type-btn{flex:1;padding:14px;border:2px solid var(--line);border-radius:var(--radius);font-weight:600;font-size:15px;transition:all .12s}
+.type-btn.merit.sel{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+.type-btn.det.sel{border-color:var(--amber);background:var(--amber-soft);color:#9a6f10}
+
+.grade-row{display:flex;gap:8px;flex-wrap:wrap}
+.grade-btn{padding:9px 18px;border:1.5px solid var(--line);border-radius:8px;font-weight:500;transition:all .12s}
+.grade-btn.sel{border-color:var(--blue);background:var(--blue-soft);color:var(--blue);font-weight:600}
+.student-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-top:4px}
+.stu-btn{padding:11px 8px;border:1.5px solid var(--line);border-radius:8px;text-align:center;position:relative;transition:all .12s}
+.stu-btn.sel{border-color:var(--blue);background:var(--blue-soft);font-weight:600}
+.stu-badge{position:absolute;top:-7px;right:-7px;background:var(--red);color:#fff;font-size:10.5px;font-weight:700;min-width:19px;height:19px;border-radius:10px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.stu-badge.merit{background:var(--green)}
+.reason-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.reason-btn{padding:10px;border:1.5px solid var(--line);border-radius:8px;text-align:center;transition:all .12s}
+.reason-btn.sel{border-color:var(--blue);background:var(--blue-soft);font-weight:600}
+textarea,input[type=text]{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:10px;font-family:inherit;font-size:14px;margin-top:4px}
+textarea{resize:vertical;min-height:60px}
+textarea:focus,input:focus{outline:none;border-color:var(--blue)}
+.date-input,select{border:1.5px solid var(--line);border-radius:8px;padding:8px 12px;font-family:inherit;font-size:14px;background:#fff}
+.save-btn{width:100%;padding:14px;background:var(--blue);color:#fff;border-radius:8px;font-weight:600;font-size:15px;margin-top:6px;transition:opacity .15s}
+.save-btn.merit-mode{background:var(--green)}
+.save-btn:disabled{opacity:.35;cursor:not-allowed}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;padding:12px 22px;border-radius:8px;font-size:14px;transition:transform .25s;z-index:99;max-width:90vw;text-align:center}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+.week-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.week-nav b{font-size:15px}
+.week-nav button{width:32px;height:32px;border:1px solid var(--line);border-radius:7px;background:#fff}
+.week-board{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.day-col{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;min-height:120px}
+.day-head{padding:8px;text-align:center;font-weight:600;font-size:13px;background:var(--grey-soft);border-bottom:1px solid var(--line)}
+.day-head.today{background:var(--ink);color:#fff}
+.day-body{padding:8px;display:flex;flex-direction:column;gap:6px}
+.rec-item{border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:6px;padding:7px 8px;font-size:12.5px;cursor:pointer;transition:background .12s;background:#fff}
+.rec-item:hover{background:var(--grey-soft)}
+.rec-item.merit{border-left-color:var(--green)}
+.rec-item.completed{opacity:.65}
+.rec-item.completed .st-icon{color:var(--green)}
+.rec-item.excused{border-left-color:var(--ink-soft);opacity:.5;text-decoration:line-through}
+.rec-item b{display:block;font-size:13px}
+.rec-item small{color:var(--ink-soft);font-size:11.5px}
+.empty-day{color:var(--ink-soft);font-size:12px;text-align:center;padding:14px 0}
+.hint{font-size:12px;color:var(--ink-soft);margin-top:10px}
+
+#modal-bg{display:none;position:fixed;inset:0;background:rgba(34,48,74,.45);z-index:50;align-items:center;justify-content:center;padding:20px}
+#modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:14px;padding:26px;max-width:380px;width:100%}
+.modal h3{font-size:16px;margin-bottom:4px}
+.modal .meta{font-size:13px;color:var(--ink-soft);margin-bottom:18px}
+.modal-actions{display:flex;flex-direction:column;gap:8px}
+.m-btn{padding:12px;border-radius:8px;font-weight:600;border:1.5px solid var(--line);transition:all .12s}
+.m-btn.done{background:var(--green-soft);border-color:var(--green);color:var(--green)}
+.m-btn.excuse{background:var(--grey-soft);color:var(--ink-soft)}
+.m-btn.danger{background:var(--red-soft);border-color:var(--red);color:var(--red)}
+.m-btn.close{border:none;color:var(--ink-soft);font-weight:400;font-size:13px}
+
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px}
+.stat-box{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;text-align:center}
+.stat-box .num{font-size:26px;font-weight:700;font-family:'Gowun Batang',serif}
+.stat-box .lbl{font-size:12px;color:var(--ink-soft);margin-top:2px}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:13px}
+.bar-row .name{width:90px;flex-shrink:0}
+.bar-track{flex:1;background:var(--grey-soft);border-radius:5px;height:20px;overflow:hidden}
+.bar-fill{height:100%;background:var(--blue);border-radius:5px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;color:#fff;font-size:11px;font-weight:600;min-width:22px}
+.bar-fill.warn{background:var(--red)}
+.bar-fill.merit{background:var(--green)}
+.rank-item{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--grey-soft);font-size:14px}
+.rank-item:last-child{border:none}
+.pill{font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:20px}
+.pill.warn{background:var(--red-soft);color:var(--red)}
+.pill.ok{background:var(--grey-soft);color:var(--ink-soft)}
+.pill.merit{background:var(--green-soft);color:var(--green)}
+
+/* 관리 탭 */
+.admin-row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start}
+.admin-row input[type=text]{margin-top:0;flex:1;min-width:140px}
+.small-btn{padding:9px 16px;background:var(--blue);color:#fff;border-radius:8px;font-weight:600;font-size:13.5px;white-space:nowrap}
+.small-btn.grey{background:var(--ink-soft)}
+.stu-table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:12px}
+.stu-table th{text-align:left;padding:8px;border-bottom:2px solid var(--line);font-size:12px;color:var(--ink-soft)}
+.stu-table td{padding:8px;border-bottom:1px solid var(--grey-soft)}
+.del-link{color:var(--red);font-size:12px;text-decoration:underline}
+#loadingBar{position:fixed;top:0;left:0;right:0;height:3px;background:var(--blue);display:none;animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.4}}
+
+@media(max-width:680px){.week-board{grid-template-columns:1fr;gap:8px}.day-col{min-height:auto}}
+</style>
+</head>
+<body>
+<div id="loadingBar"></div>
+
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="school-mark">등대교육공동체</div>
+    <p>초등 상점·디텐션 관리 시스템<br>교직원 계정으로 로그인하세요</p>
+    <button class="google-btn" id="loginBtn">
+      <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Google 계정으로 로그인
+    </button>
+    <p class="login-err" id="loginErr"></p>
+    <p class="login-note">등록된 교직원 계정만 접속할 수 있습니다</p>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <div class="brand">LIS <span>초등 상점·디텐션</span></div>
+    <div class="user-chip">
+      <div class="avatar" id="uAvatar"></div>
+      <div id="uName"></div>
+      <button class="logout" id="logoutBtn">로그아웃</button>
+    </div>
+  </header>
+
+  <nav id="mainNav">
+    <button class="active" data-tab="0">기록</button>
+    <button data-tab="1">주간 현황</button>
+    <button data-tab="2">통계</button>
+    <button data-tab="3" id="adminTabBtn" style="display:none">관리</button>
+  </nav>
+
+  <!-- 탭 0: 기록 -->
+  <section id="tab0">
+    <div class="type-toggle">
+      <button class="type-btn merit" id="btnMerit">🌟 상점</button>
+      <button class="type-btn det sel" id="btnDet">⚠️ 디텐션</button>
+    </div>
+    <div class="card">
+      <div class="step-label">1 · 날짜와 학년</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+        <input type="date" class="date-input" id="recDate">
+        <div class="grade-row" id="gradeRow"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="step-label">2 · 학생 선택 <span style="color:var(--ink-soft);font-weight:400">(빨강 = 이번 달 디텐션 3회↑ · 초록 = 상점 5회↑)</span></div>
+      <div class="student-grid" id="stuGrid"><div class="empty-day">학년을 먼저 선택하세요</div></div>
+    </div>
+    <div class="card">
+      <div class="step-label">3 · 사유</div>
+      <div class="reason-grid" id="reasonGrid"></div>
+      <textarea id="detail" placeholder="상세 메모 (선택 사항)"></textarea>
+    </div>
+    <button class="save-btn" id="saveBtn" disabled>기록 저장</button>
+  </section>
+
+  <!-- 탭 1: 주간 현황 -->
+  <section id="tab1" style="display:none">
+    <div class="week-nav">
+      <button id="wPrev">‹</button>
+      <b id="weekLabel"></b>
+      <button id="wNext">›</button>
+    </div>
+    <div class="week-board" id="weekBoard"></div>
+    <p class="hint">🌟 초록 = 상점 · ⚠️ 노랑 = 디텐션. 디텐션 항목을 누르면 이행 완료·취소 처리를 할 수 있습니다.</p>
+  </section>
+
+  <!-- 탭 2: 통계 -->
+  <section id="tab2" style="display:none">
+    <div style="margin-bottom:14px"><select id="statMonth"></select></div>
+    <div class="stat-row" id="statBoxes"></div>
+    <div class="card">
+      <h2>🌟 상점 우수 학생</h2>
+      <div id="meritRank"></div>
+    </div>
+    <div class="card">
+      <h2>⚠️ 디텐션 누적 학생</h2>
+      <div id="detRank"></div>
+      <p class="hint">월 3회 이상 누적 학생은 담임·교목 상담 연계를 권장합니다.</p>
+    </div>
+    <div class="card">
+      <h2>사유별 분포</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px" id="reasonSplit">
+        <div><div class="step-label" style="color:var(--green)">상점</div><div id="meritBars"></div></div>
+        <div><div class="step-label" style="color:#9a6f10">디텐션</div><div id="detBars"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>학년별 발생 건수</h2>
+      <div id="gradeBars"></div>
+    </div>
+  </section>
+
+  <!-- 탭 3: 관리 (admin) -->
+  <section id="tab3" style="display:none">
+    <div class="card">
+      <h2>학생 추가</h2>
+      <div class="admin-row">
+        <input type="text" id="newStuName" placeholder="이름">
+        <select id="newStuGrade"><option value="1">1학년</option><option value="2">2학년</option><option value="3">3학년</option><option value="4">4학년</option><option value="5">5학년</option></select>
+        <button class="small-btn" id="addStuBtn">추가</button>
+      </div>
+      <div style="margin-top:14px">
+        <div class="step-label">CSV 일괄 등록 (한 줄에 하나씩: 이름,학년)</div>
+        <textarea id="csvBox" placeholder="김하은,1&#10;이도윤,1&#10;한소율,3"></textarea>
+        <button class="small-btn grey" id="csvBtn" style="margin-top:8px">일괄 등록</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>교사 등록</h2>
+      <div class="admin-row">
+        <input type="text" id="newTeaEmail" placeholder="이메일 (Google 계정)">
+        <input type="text" id="newTeaName" placeholder="이름">
+        <select id="newTeaRole"><option value="teacher">teacher</option><option value="admin">admin</option></select>
+        <button class="small-btn" id="addTeaBtn">등록</button>
+      </div>
+      <p class="hint">등록된 이메일만 로그인할 수 있습니다.</p>
+    </div>
+    <div class="card">
+      <h2>학생 명단</h2>
+      <table class="stu-table"><thead><tr><th>이름</th><th>학년</th><th></th></tr></thead><tbody id="stuTableBody"></tbody></table>
+    </div>
+  </section>
+</div>
+
+<div id="modal-bg">
+  <div class="modal">
+    <h3 id="mName"></h3>
+    <div class="meta" id="mMeta"></div>
+    <div class="modal-actions" id="mActions"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, setDoc, getDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+/* ═══════════════════════════════════════════
+   ① Firebase 설정 — 본인 프로젝트 값으로 교체
+   Firebase 콘솔 > 프로젝트 설정 > 일반 > 내 앱
+═══════════════════════════════════════════ */
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+const MERIT_REASONS=['친구 돕기','솔선수범','예의 바름','성실한 과제','섬김과 배려','기타'];
+const DET_REASONS=['숙제 미제출','수업 방해','지각','규칙 위반','친구 갈등','기타'];
+const DET_WARN=3;   // 디텐션 월 누적 경고 기준
+const MERIT_STAR=5; // 상점 월 누적 우수 기준
+
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const db=getFirestore(app);
+
+const $=id=>document.getElementById(id);
+const fmt=d=>{const z=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;};
+const DAYS=['월','화','수','목','금'];
+const todayStr=fmt(new Date());
+let me=null;           // {email,name,role}
+let STUDENTS=[],RECORDS=[];
+let unsubStu=null,unsubRec=null;
+
+/* ── 로그인 ── */
+$('loginBtn').onclick=async()=>{
+  $('loginErr').style.display='none';
+  try{ await signInWithPopup(auth,new GoogleAuthProvider()); }
+  catch(e){ showLoginErr('로그인 실패: '+e.code); }
+};
+$('logoutBtn').onclick=()=>signOut(auth);
+function showLoginErr(msg){const e=$('loginErr');e.textContent=msg;e.style.display='block';}
+
+onAuthStateChanged(auth,async user=>{
+  if(!user){ teardown(); return; }
+  $('loadingBar').style.display='block';
+  const tDoc=await getDoc(doc(db,'teachers',user.email));
+  $('loadingBar').style.display='none';
+  if(!tDoc.exists()){
+    showLoginErr('등록되지 않은 계정입니다. 관리자에게 등록을 요청하세요.');
+    await signOut(auth); return;
+  }
+  me={email:user.email,...tDoc.data()};
+  $('uName').textContent=me.name+' 선생님';
+  $('uAvatar').textContent=me.name[0];
+  if(me.role==='admin')$('adminTabBtn').style.display='block';
+  $('loginScreen').style.display='none';
+  $('app').style.display='block';
+  subscribe();
+});
+
+function teardown(){
+  me=null;
+  if(unsubStu)unsubStu();if(unsubRec)unsubRec();
+  $('app').style.display='none';
+  $('adminTabBtn').style.display='none';
+  $('loginScreen').style.display='flex';
+}
+
+function subscribe(){
+  unsubStu=onSnapshot(query(collection(db,'students'),orderBy('grade'),orderBy('name')),snap=>{
+    STUDENTS=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderStudents();renderStuTable();
+  });
+  unsubRec=onSnapshot(query(collection(db,'records'),orderBy('date','desc')),snap=>{
+    RECORDS=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderStudents();renderWeek();renderStats();
+  });
+}
+
+/* ── 탭 ── */
+$('mainNav').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  document.querySelectorAll('#mainNav button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  [0,1,2,3].forEach(n=>{const s=$('tab'+n);if(s)s.style.display=String(n)===b.dataset.tab?'block':'none';});
+  if(b.dataset.tab==='1')renderWeek();
+  if(b.dataset.tab==='2')renderStats();
+});
+
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400);}
+const stuById=id=>STUDENTS.find(s=>s.id===id);
+function monthCount(sid,type,ym){
+  return RECORDS.filter(r=>r.studentId===sid&&r.type===type&&r.date.startsWith(ym)&&r.status!=='excused').length;
+}
+
+/* ── 탭 0: 기록 ── */
+let recType='detention',selGrade=null,selStu=null,selReason=null;
+$('recDate').value=todayStr;
+$('btnMerit').onclick=()=>setType('merit');
+$('btnDet').onclick=()=>setType('detention');
+function setType(t){
+  recType=t;selReason=null;
+  $('btnMerit').classList.toggle('sel',t==='merit');
+  $('btnDet').classList.toggle('sel',t==='detention');
+  $('saveBtn').classList.toggle('merit-mode',t==='merit');
+  $('saveBtn').textContent=t==='merit'?'🌟 상점 저장':'⚠️ 디텐션 저장';
+  renderReasons();checkSave();
+}
+function renderGrades(){
+  $('gradeRow').innerHTML=[1,2,3,4,5].map(g=>
+    `<button class="grade-btn ${selGrade===g?'sel':''}" data-g="${g}">${g}학년</button>`).join('');
+  $('gradeRow').querySelectorAll('button').forEach(b=>b.onclick=()=>{selGrade=+b.dataset.g;selStu=null;renderGrades();renderStudents();checkSave();});
+}
+function renderStudents(){
+  if(!selGrade){$('stuGrid').innerHTML='<div class="empty-day">학년을 먼저 선택하세요</div>';return;}
+  const ym=todayStr.slice(0,7);
+  $('stuGrid').innerHTML=STUDENTS.filter(s=>s.grade===selGrade).map(s=>{
+    const dc=monthCount(s.id,'detention',ym),mc=monthCount(s.id,'merit',ym);
+    let badge='';
+    if(dc>=DET_WARN)badge=`<span class="stu-badge">${dc}</span>`;
+    else if(mc>=MERIT_STAR)badge=`<span class="stu-badge merit">${mc}</span>`;
+    return `<button class="stu-btn ${selStu===s.id?'sel':''}" data-id="${s.id}">${s.name}${badge}</button>`;
+  }).join('')||'<div class="empty-day">해당 학년 학생이 없습니다. 관리 탭에서 등록하세요.</div>';
+  $('stuGrid').querySelectorAll('.stu-btn').forEach(b=>b.onclick=()=>{selStu=b.dataset.id;renderStudents();checkSave();});
+}
+function renderReasons(){
+  const list=recType==='merit'?MERIT_REASONS:DET_REASONS;
+  $('reasonGrid').innerHTML=list.map(r=>
+    `<button class="reason-btn ${selReason===r?'sel':''}" data-r="${r}">${r}</button>`).join('');
+  $('reasonGrid').querySelectorAll('button').forEach(b=>b.onclick=()=>{selReason=b.dataset.r;renderReasons();checkSave();});
+}
+function checkSave(){$('saveBtn').disabled=!(selGrade&&selStu&&selReason&&$('recDate').value);}
+
+$('saveBtn').onclick=async()=>{
+  const s=stuById(selStu);
+  $('saveBtn').disabled=true;
+  try{
+    await addDoc(collection(db,'records'),{
+      type:recType,studentId:selStu,studentName:s.name,grade:s.grade,
+      date:$('recDate').value,reason:selReason,detail:$('detail').value.trim(),
+      teacherEmail:me.email,teacherName:me.name,
+      status:recType==='detention'?'pending':'recorded',
+      createdAt:serverTimestamp()
+    });
+    const ym=$('recDate').value.slice(0,7);
+    const c=monthCount(selStu,recType,ym)+1;
+    if(recType==='detention')
+      toast(`${s.name} 디텐션 기록 완료${c>=DET_WARN?` · 이번 달 누적 ${c}회 — 상담 연계 권장`:''}`);
+    else
+      toast(`${s.name} 상점 기록 완료 🌟${c>=MERIT_STAR?` · 이번 달 ${c}회 — 칭찬 우수!`:''}`);
+    selStu=null;selReason=null;$('detail').value='';
+    renderStudents();renderReasons();
+  }catch(e){toast('저장 실패: '+e.code);}
+  checkSave();
+};
+
+/* ── 탭 1: 주간 현황 ── */
+let weekStart=(()=>{const d=new Date();const day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);return d;})();
+let modalRecId=null;
+$('wPrev').onclick=()=>{weekStart.setDate(weekStart.getDate()-7);renderWeek();};
+$('wNext').onclick=()=>{weekStart.setDate(weekStart.getDate()+7);renderWeek();};
+
+function renderWeek(){
+  const dates=[...Array(5)].map((_,i)=>{const d=new Date(weekStart);d.setDate(d.getDate()+i);return d;});
+  $('weekLabel').textContent=`${dates[0].getMonth()+1}월 ${dates[0].getDate()}일 – ${dates[4].getMonth()+1}월 ${dates[4].getDate()}일`;
+  $('weekBoard').innerHTML=dates.map((d,i)=>{
+    const ds=fmt(d);
+    const items=RECORDS.filter(x=>x.date===ds);
+    return `<div class="day-col">
+      <div class="day-head ${ds===todayStr?'today':''}">${DAYS[i]} · ${d.getDate()}일</div>
+      <div class="day-body">${
+        items.length?items.map(x=>{
+          const icon=x.type==='merit'?'🌟 ':x.status==='completed'?'<span class="st-icon">✓</span> ':x.status==='excused'?'– ':'';
+          return `<div class="rec-item ${x.type==='merit'?'merit':''} ${x.status}" data-id="${x.id}">
+            <b>${icon}${x.studentName} <small>${x.grade}학년</small></b>
+            <small>${x.reason} · ${x.teacherName}</small></div>`;
+        }).join(''):'<div class="empty-day">기록 없음</div>'
+      }</div></div>`;
+  }).join('');
+  $('weekBoard').querySelectorAll('.rec-item').forEach(el=>el.onclick=()=>openModal(el.dataset.id));
+}
+
+function openModal(id){
+  modalRecId=id;
+  const r=RECORDS.find(x=>x.id===id);if(!r)return;
+  $('mName').textContent=`${r.type==='merit'?'🌟 ':'⚠️ '}${r.studentName} (${r.grade}학년)`;
+  $('mMeta').innerHTML=`${r.date} · ${r.reason} · 기록: ${r.teacherName} 선생님${r.detail?`<br>메모: ${r.detail}`:''}`;
+  let btns='';
+  if(r.type==='detention'){
+    btns+=`<button class="m-btn done" data-st="completed">✓ 디텐션 이행 완료</button>
+           <button class="m-btn excuse" data-st="excused">기록 취소 (excused)</button>
+           <button class="m-btn" data-st="pending">대기 상태로 되돌리기</button>`;
+  }
+  if(me.role==='admin')btns+=`<button class="m-btn danger" data-del="1">기록 삭제 (관리자)</button>`;
+  btns+=`<button class="m-btn close" data-close="1">닫기</button>`;
+  $('mActions').innerHTML=btns;
+  $('mActions').querySelectorAll('button').forEach(b=>b.onclick=async()=>{
+    if(b.dataset.close){closeModal();return;}
+    if(b.dataset.del){
+      if(confirm('이 기록을 삭제할까요? 되돌릴 수 없습니다.')){
+        await deleteDoc(doc(db,'records',modalRecId));toast('기록이 삭제되었습니다');
+      }
+      closeModal();return;
+    }
+    await updateDoc(doc(db,'records',modalRecId),{status:b.dataset.st});
+    toast(b.dataset.st==='completed'?'이행 완료 처리되었습니다':b.dataset.st==='excused'?'기록이 취소 처리되었습니다':'대기 상태로 변경되었습니다');
+    closeModal();
+  });
+  $('modal-bg').classList.add('open');
+}
+function closeModal(){$('modal-bg').classList.remove('open');}
+$('modal-bg').onclick=e=>{if(e.target.id==='modal-bg')closeModal();};
+
+/* ── 탭 2: 통계 ── */
+(function initMonths(){
+  const sel=$('statMonth');const now=new Date();
+  for(let i=0;i<12;i++){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    const v=fmt(d).slice(0,7);
+    sel.insertAdjacentHTML('beforeend',`<option value="${v}">${d.getFullYear()}년 ${d.getMonth()+1}월</option>`);
+  }
+  sel.onchange=renderStats;
+})();
+
+function renderStats(){
+  const ym=$('statMonth').value;
+  const recs=RECORDS.filter(r=>r.date.startsWith(ym)&&r.status!=='excused');
+  const merits=recs.filter(r=>r.type==='merit'),dets=recs.filter(r=>r.type==='detention');
+  const pending=RECORDS.filter(r=>r.type==='detention'&&r.status==='pending').length;
+  const flagged=[...new Set(dets.map(r=>r.studentId))].filter(sid=>monthCount(sid,'detention',ym)>=DET_WARN).length;
+
+  $('statBoxes').innerHTML=`
+    <div class="stat-box"><div class="num" style="color:var(--green)">${merits.length}</div><div class="lbl">🌟 상점</div></div>
+    <div class="stat-box"><div class="num" style="color:#9a6f10">${dets.length}</div><div class="lbl">⚠️ 디텐션</div></div>
+    <div class="stat-box"><div class="num">${pending}</div><div class="lbl">이행 대기 중</div></div>
+    <div class="stat-box"><div class="num" style="color:${flagged?'var(--red)':'var(--ink)'}">${flagged}</div><div class="lbl">상담 연계 대상</div></div>`;
+
+  const rank=(list)=>{const m={};list.forEach(r=>m[r.studentId]=(m[r.studentId]||0)+1);return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,6);};
+
+  $('meritRank').innerHTML=rank(merits).map(([sid,c])=>{
+    const s=stuById(sid);if(!s)return'';
+    return `<div class="rank-item"><span>${s.name} <small style="color:var(--ink-soft)">${s.grade}학년</small></span>
+      <span class="pill merit">${c}회${c>=MERIT_STAR?' · 우수 🌟':''}</span></div>`;
+  }).join('')||'<div class="empty-day">기록 없음</div>';
+
+  $('detRank').innerHTML=rank(dets).map(([sid,c])=>{
+    const s=stuById(sid);if(!s)return'';
+    return `<div class="rank-item"><span>${s.name} <small style="color:var(--ink-soft)">${s.grade}학년</small></span>
+      <span class="pill ${c>=DET_WARN?'warn':'ok'}">${c}회${c>=DET_WARN?' · 상담 권장':''}</span></div>`;
+  }).join('')||'<div class="empty-day">기록 없음</div>';
+
+  const bars=(list,reasons,cls,el)=>{
+    const m={};list.forEach(r=>m[r.reason]=(m[r.reason]||0)+1);
+    const mx=Math.max(...Object.values(m),1);
+    $(el).innerHTML=reasons.filter(r=>m[r]).sort((a,b)=>m[b]-m[a]).map(r=>
+      `<div class="bar-row"><span class="name">${r}</span>
+       <div class="bar-track"><div class="bar-fill ${cls}" style="width:${m[r]/mx*100}%">${m[r]}</div></div></div>`).join('')||'<div class="empty-day">기록 없음</div>';
+  };
+  bars(merits,MERIT_REASONS,'merit','meritBars');
+  bars(dets,DET_REASONS,'','detBars');
+
+  const byG={};dets.forEach(r=>byG[r.grade]=(byG[r.grade]||0)+1);
+  const mg={};merits.forEach(r=>mg[r.grade]=(mg[r.grade]||0)+1);
+  const mx=Math.max(...Object.values(byG),...Object.values(mg),1);
+  $('gradeBars').innerHTML=[1,2,3,4,5].map(g=>
+    `<div class="bar-row"><span class="name">${g}학년</span>
+     <div class="bar-track"><div class="bar-fill merit" style="width:${(mg[g]||0)/mx*100}%">${mg[g]||0}</div></div>
+     <div class="bar-track"><div class="bar-fill" style="width:${(byG[g]||0)/mx*100}%">${byG[g]||0}</div></div></div>`).join('')+
+    '<p class="hint">왼쪽 초록 = 상점 · 오른쪽 파랑 = 디텐션</p>';
+}
+
+/* ── 탭 3: 관리 ── */
+$('addStuBtn').onclick=async()=>{
+  const name=$('newStuName').value.trim();if(!name)return toast('이름을 입력하세요');
+  await addDoc(collection(db,'students'),{name,grade:+$('newStuGrade').value,active:true});
+  $('newStuName').value='';toast(`${name} 학생 등록 완료`);
+};
+$('csvBtn').onclick=async()=>{
+  const lines=$('csvBox').value.trim().split('\n').map(l=>l.trim()).filter(Boolean);
+  let ok=0;
+  for(const line of lines){
+    const [name,g]=line.split(',').map(x=>x.trim());
+    const grade=parseInt(g);
+    if(name&&grade>=1&&grade<=5){await addDoc(collection(db,'students'),{name,grade,active:true});ok++;}
+  }
+  $('csvBox').value='';toast(`${ok}명 등록 완료`);
+};
+$('addTeaBtn').onclick=async()=>{
+  const email=$('newTeaEmail').value.trim(),name=$('newTeaName').value.trim();
+  if(!email||!name)return toast('이메일과 이름을 입력하세요');
+  await setDoc(doc(db,'teachers',email),{name,role:$('newTeaRole').value});
+  $('newTeaEmail').value='';$('newTeaName').value='';toast(`${name} 선생님 등록 완료`);
+};
+function renderStuTable(){
+  if(!me||me.role!=='admin')return;
+  $('stuTableBody').innerHTML=STUDENTS.map(s=>
+    `<tr><td>${s.name}</td><td>${s.grade}학년</td>
+     <td><button class="del-link" data-id="${s.id}">삭제</button></td></tr>`).join('');
+  $('stuTableBody').querySelectorAll('.del-link').forEach(b=>b.onclick=async()=>{
+    if(confirm('학생을 삭제할까요? 기존 기록은 유지됩니다.'))
+      await deleteDoc(doc(db,'students',b.dataset.id));
+  });
+}
+
+renderGrades();renderReasons();setType('detention');
+</script>
+</body>
+</html>
