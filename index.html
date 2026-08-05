@@ -129,6 +129,9 @@ textarea:focus,input:focus{outline:none;border-color:var(--blue)}
 .stu-table th{text-align:left;padding:8px;border-bottom:2px solid var(--line);font-size:12px;color:var(--ink-soft)}
 .stu-table td{padding:8px;border-bottom:1px solid var(--grey-soft)}
 .del-link{color:var(--red);font-size:12px;text-decoration:underline}
+.edit-link{color:var(--blue);font-size:12px;text-decoration:underline;margin-right:10px}
+.reason-cols{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media(max-width:600px){.reason-cols{grid-template-columns:1fr;gap:18px}}
 #loadingBar{position:fixed;top:0;left:0;right:0;height:3px;background:var(--blue);display:none;animation:pulse 1s infinite}
 @keyframes pulse{50%{opacity:.4}}
 
@@ -256,6 +259,10 @@ textarea:focus,input:focus{outline:none;border-color:var(--blue)}
       <p class="hint">등록된 이메일만 로그인할 수 있습니다.</p>
     </div>
     <div class="card">
+      <h2>사유 항목 관리</h2>
+      <div id="reasonAdmin"></div>
+    </div>
+    <div class="card">
       <h2>학생 명단</h2>
       <table class="stu-table"><thead><tr><th>이름</th><th>학년</th><th></th></tr></thead><tbody id="stuTableBody"></tbody></table>
     </div>
@@ -290,8 +297,10 @@ const firebaseConfig = {
   appId: "YOUR_APP_ID"
 };
 
-const MERIT_REASONS=['친구 돕기','솔선수범','예의 바름','성실한 과제','섬김과 배려','기타'];
-const DET_REASONS=['숙제 미제출','수업 방해','지각','규칙 위반','친구 갈등','기타'];
+/* 사유 항목은 reasons 컬렉션에서 관리한다(관리 탭에서 추가·수정·삭제).
+   컬렉션이 비어 있으면 아래 기본값이 그대로 표시된다. */
+const DEFAULT_MERIT_REASONS=['친구 돕기','솔선수범','예의 바름','성실한 과제','섬김과 배려','기타'];
+const DEFAULT_DET_REASONS=['숙제 미제출','수업 방해','지각','규칙 위반','친구 갈등','기타'];
 const DET_WARN=3;   // 디텐션 월 누적 경고 기준
 const MERIT_STAR=5; // 상점 월 누적 우수 기준
 
@@ -305,7 +314,12 @@ const DAYS=['월','화','수','목','금'];
 const todayStr=fmt(new Date());
 let me=null;           // {email,name,role}
 let STUDENTS=[],RECORDS=[];
-let unsubStu=null,unsubRec=null;
+let REASONS={merit:[],detention:[]};   // [{id,type,label,order}]
+let unsubStu=null,unsubRec=null,unsubRea=null;
+// 등록된 사유가 없으면 기본값으로 대체
+const reasonLabels=type=>REASONS[type].length
+  ? REASONS[type].map(r=>r.label)
+  : (type==='merit'?DEFAULT_MERIT_REASONS:DEFAULT_DET_REASONS);
 
 /* ── 로그인 ── */
 $('loginBtn').onclick=async()=>{
@@ -336,7 +350,7 @@ onAuthStateChanged(auth,async user=>{
 
 function teardown(){
   me=null;
-  if(unsubStu)unsubStu();if(unsubRec)unsubRec();
+  if(unsubStu)unsubStu();if(unsubRec)unsubRec();if(unsubRea)unsubRea();
   $('app').style.display='none';
   $('adminTabBtn').style.display='none';
   $('loginScreen').style.display='flex';
@@ -350,6 +364,13 @@ function subscribe(){
   unsubRec=onSnapshot(query(collection(db,'records'),orderBy('date','desc')),snap=>{
     RECORDS=snap.docs.map(d=>({id:d.id,...d.data()}));
     renderStudents();renderWeek();renderStats();
+  });
+  unsubRea=onSnapshot(query(collection(db,'reasons'),orderBy('order')),snap=>{
+    const all=snap.docs.map(d=>({id:d.id,...d.data()}));
+    REASONS={merit:all.filter(r=>r.type==='merit'),detention:all.filter(r=>r.type==='detention')};
+    // 선택해 둔 사유가 삭제·수정되었으면 선택을 해제한다
+    if(selReason&&!reasonLabels(recType).includes(selReason))selReason=null;
+    renderReasons();renderReasonAdmin();checkSave();
   });
 }
 
@@ -400,7 +421,7 @@ function renderStudents(){
   $('stuGrid').querySelectorAll('.stu-btn').forEach(b=>b.onclick=()=>{selStu=b.dataset.id;renderStudents();checkSave();});
 }
 function renderReasons(){
-  const list=recType==='merit'?MERIT_REASONS:DET_REASONS;
+  const list=reasonLabels(recType);
   $('reasonGrid').innerHTML=list.map(r=>
     `<button class="reason-btn ${selReason===r?'sel':''}" data-r="${r}">${r}</button>`).join('');
   $('reasonGrid').querySelectorAll('button').forEach(b=>b.onclick=()=>{selReason=b.dataset.r;renderReasons();checkSave();});
@@ -525,15 +546,16 @@ function renderStats(){
       <span class="pill ${c>=DET_WARN?'warn':'ok'}">${c}회${c>=DET_WARN?' · 상담 권장':''}</span></div>`;
   }).join('')||'<div class="empty-day">기록 없음</div>';
 
-  const bars=(list,reasons,cls,el)=>{
+  // 기록에 실제로 쓰인 사유를 집계한다(나중에 삭제된 사유도 통계에는 그대로 남는다)
+  const bars=(list,cls,el)=>{
     const m={};list.forEach(r=>m[r.reason]=(m[r.reason]||0)+1);
     const mx=Math.max(...Object.values(m),1);
-    $(el).innerHTML=reasons.filter(r=>m[r]).sort((a,b)=>m[b]-m[a]).map(r=>
+    $(el).innerHTML=Object.keys(m).sort((a,b)=>m[b]-m[a]).map(r=>
       `<div class="bar-row"><span class="name">${r}</span>
        <div class="bar-track"><div class="bar-fill ${cls}" style="width:${m[r]/mx*100}%">${m[r]}</div></div></div>`).join('')||'<div class="empty-day">기록 없음</div>';
   };
-  bars(merits,MERIT_REASONS,'merit','meritBars');
-  bars(dets,DET_REASONS,'','detBars');
+  bars(merits,'merit','meritBars');
+  bars(dets,'','detBars');
 
   const byG={};dets.forEach(r=>byG[r.grade]=(byG[r.grade]||0)+1);
   const mg={};merits.forEach(r=>mg[r.grade]=(mg[r.grade]||0)+1);
@@ -567,6 +589,68 @@ $('addTeaBtn').onclick=async()=>{
   await setDoc(doc(db,'teachers',email),{name,role:$('newTeaRole').value});
   $('newTeaEmail').value='';$('newTeaName').value='';toast(`${name} 선생님 등록 완료`);
 };
+/* 사유 항목 관리 — reasons 컬렉션이 비어 있으면 기본값을 심는 버튼부터 보여준다 */
+function renderReasonAdmin(){
+  if(!me||me.role!=='admin')return;
+  const box=$('reasonAdmin');if(!box)return;
+
+  if(!REASONS.merit.length&&!REASONS.detention.length){
+    box.innerHTML=`<p class="hint" style="margin:0 0 12px">지금은 기본 사유 목록이 표시되고 있습니다.
+      아래 버튼을 누르면 기본 목록이 저장되어 추가·수정·삭제할 수 있습니다.</p>
+      <button class="small-btn" id="seedReasonBtn">기본 사유 등록</button>`;
+    $('seedReasonBtn').onclick=async()=>{
+      $('seedReasonBtn').disabled=true;
+      let i=0;for(const label of DEFAULT_MERIT_REASONS)
+        await addDoc(collection(db,'reasons'),{type:'merit',label,order:i++});
+      i=0;for(const label of DEFAULT_DET_REASONS)
+        await addDoc(collection(db,'reasons'),{type:'detention',label,order:i++});
+      toast('기본 사유가 등록되었습니다');
+    };
+    return;
+  }
+
+  const col=(type,title,color)=>`<div>
+    <div class="step-label" style="color:${color}">${title}</div>
+    ${REASONS[type].map(r=>`<div class="rank-item"><span>${r.label}</span><span>
+        <button class="edit-link" data-type="${type}" data-edit="${r.id}">수정</button>
+        <button class="del-link" data-type="${type}" data-del="${r.id}">삭제</button></span></div>`
+      ).join('')||'<div class="empty-day">항목 없음</div>'}
+    <div class="admin-row" style="margin-top:10px">
+      <input type="text" id="newReason-${type}" placeholder="새 사유">
+      <button class="small-btn" data-add="${type}">추가</button>
+    </div></div>`;
+
+  box.innerHTML=`<div class="reason-cols">
+      ${col('merit','🌟 상점','var(--green)')}${col('detention','⚠️ 디텐션','#9a6f10')}
+    </div>
+    <p class="hint">여기서 바꾼 항목은 기록 탭에 바로 반영됩니다.
+      사유를 삭제해도 이미 저장된 기록의 사유는 그대로 남습니다.</p>`;
+
+  box.querySelectorAll('button').forEach(b=>b.onclick=async()=>{
+    const {add,edit,del,type}=b.dataset;
+    if(add){
+      const inp=$('newReason-'+add),label=inp.value.trim();
+      if(!label)return toast('사유를 입력하세요');
+      if(reasonLabels(add).includes(label))return toast('이미 있는 사유입니다');
+      const order=REASONS[add].reduce((m,r)=>Math.max(m,r.order??0),-1)+1;
+      await addDoc(collection(db,'reasons'),{type:add,label,order});
+      inp.value='';toast(`"${label}" 추가되었습니다`);
+    }else if(edit){
+      const cur=REASONS[type].find(r=>r.id===edit);if(!cur)return;
+      const v=prompt('사유 이름을 수정합니다',cur.label);
+      if(v===null)return;
+      const label=v.trim();
+      if(!label)return toast('빈 이름은 저장할 수 없습니다');
+      await updateDoc(doc(db,'reasons',edit),{label});toast('수정되었습니다');
+    }else if(del){
+      const cur=REASONS[type].find(r=>r.id===del);if(!cur)return;
+      if(confirm(`"${cur.label}" 사유를 삭제할까요? 이미 저장된 기록은 그대로 유지됩니다.`)){
+        await deleteDoc(doc(db,'reasons',del));toast('삭제되었습니다');
+      }
+    }
+  });
+}
+
 function renderStuTable(){
   if(!me||me.role!=='admin')return;
   $('stuTableBody').innerHTML=STUDENTS.map(s=>

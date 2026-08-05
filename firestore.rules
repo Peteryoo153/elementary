@@ -39,6 +39,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // 사유 항목 — 모든 교사가 읽고, 관리자만 편집
+    match /reasons/{reasonId} {
+      allow read: if isTeacher();
+      allow write: if isAdmin();
+    }
+
     // 상점·디텐션 기록
     match /records/{recordId} {
       allow read: if isTeacher();
