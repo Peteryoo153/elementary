@@ -1,0 +1,53 @@
+rules_version = '2';
+
+// LIS 초등 상점·디텐션 관리 — Firestore 보안 규칙
+// Firebase 콘솔 > Firestore Database > 규칙 탭에 그대로 붙여넣고 [게시]
+//
+// 원칙
+//  - teachers 컬렉션에 문서가 있는 Google 계정만 데이터를 읽고 쓸 수 있다
+//  - 학생 명단·교사 등록·기록 삭제는 role == 'admin' 만 가능
+//  - 최초 admin 교사 문서는 콘솔에서 직접 만든다 (콘솔은 규칙을 우회함)
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+    function myEmail() {
+      return request.auth.token.email;
+    }
+    function isTeacher() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/teachers/$(myEmail()));
+    }
+    function isAdmin() {
+      return isTeacher()
+        && get(/databases/$(database)/documents/teachers/$(myEmail())).data.role == 'admin';
+    }
+
+    // 교직원 명단 — 문서 ID = 이메일
+    match /teachers/{email} {
+      // 로그인 직후 본인 문서를 읽어 등록 여부를 확인한다
+      allow read: if signedIn() && (email == myEmail() || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // 학생 명단
+    match /students/{studentId} {
+      allow read: if isTeacher();
+      allow write: if isAdmin();
+    }
+
+    // 상점·디텐션 기록
+    match /records/{recordId} {
+      allow read: if isTeacher();
+      // 남의 이름으로 기록을 만들 수 없게 작성자 이메일을 강제한다
+      allow create: if isTeacher()
+        && request.resource.data.teacherEmail == myEmail();
+      // 이행 완료 / 취소 등 상태 변경은 모든 교사가 가능
+      allow update: if isTeacher();
+      allow delete: if isAdmin();
+    }
+  }
+}
